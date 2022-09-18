@@ -23,7 +23,9 @@ class DataPrepare(object):
         self.images = []
         self.categories = [{'supercategorr': 'FishHead', 'id': 1, 'name': 'FishHead'},
                            {'supercategorr': 'FishBody', 'id': 2, 'name': 'FishBody'},
-                           {'supercategorr': 'Fish', 'id': 3, 'name': 'Fish'}
+                           {'supercategorr': 'Fish', 'id': 3, 'name': 'Fish'},
+                           {'supercategorr': 'FishMouse', 'id': 4, 'name': 'FishMouse'},
+                           {'supercategorr': 'Finger', 'id': 5, 'name': 'Finger'}
                            ]
         self.annotations = []
         self.label = []
