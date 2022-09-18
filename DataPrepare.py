@@ -37,7 +37,7 @@ class DataPrepare(object):
 
     def data_transfer(self):
         for num, json_file in enumerate(self.labelme_json):
-            with open(json_file, 'r') as fp:
+            with open(json_file, 'r', , encoding='utf-8') as fp:
                 data = json.load(fp)  # load json files
                 self.images.append(self.image(data, num))
                 for shapes in data['shapes']:
