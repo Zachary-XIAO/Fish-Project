@@ -59,7 +59,7 @@ class FishRecogModel():
         self.cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml")
         self.cfg.DATASETS.TRAIN = ("fishdata",)
         self.cfg.DATASETS.TEST = ()
-        self.cfg.MODEL.ROI_HEADS.NUM_CLASSES = 3  # number of class (exclude background)
+        self.cfg.MODEL.ROI_HEADS.NUM_CLASSES = 5  # number of class (exclude background)
         self.cfg.DATALOADER.NUM_WORKERS = 0
         self.cfg.SOLVER.IMS_PER_BATCH = 2  # image per gpu, lower it down if the GPU is out of memory
         self.cfg.SOLVER.BASE_LR = 0.0001
@@ -74,7 +74,7 @@ class FishRecogModel():
     def load_model(self):
         try:
             self.cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
-            self.cfg.MODEL.ROI_HEADS.NUM_CLASSES = 3
+            self.cfg.MODEL.ROI_HEADS.NUM_CLASSES = 5
             self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.8
             self.cfg.MODEL.WEIGHTS = os.path.join(self.cfg.OUTPUT_DIR, "model_final.pth")
 
@@ -105,6 +105,9 @@ class FishRecogModel():
             fish_head_txt = ''
             fish_body_txt = ''
             fish_txt = ''
+            fish_mouse_txt = ''
+            finger_txt = ''
+
             for i in range(len(pred_boxes)):
                 y_middle = round((pred_boxes[i][3].item() + pred_boxes[i][1].item()) / 2)
                 x_middle = round((pred_boxes[i][2].item() + pred_boxes[i][0].item()) / 2)
@@ -114,7 +117,11 @@ class FishRecogModel():
                 fish_body_txt = 'Fish Body Pos: (' + str(x_middle) + ',' + str(y_middle) + ')\n'
             elif class_ids[i] == 2:
                 fish_txt = 'Fish Pos: (' + str(x_middle) + ',' + str(y_middle) + ')\n'
-            result_txt = fish_txt + fish_head_txt + fish_body_txt
+            elif class_ids[i] == 3:
+                fish_mouse_txt = 'FishMouse Pos: (' + str(x_middle) + ',' + str(y_middle) + ')\n'
+            elif class_ids[i] == 4:
+                finger_txt = 'Finger Pos: (' + str(x_middle) + ',' + str(y_middle) + ')\n'
+            result_txt = fish_txt + fish_head_txt + fish_body_txt + fish_mouse_txt + finger_txt
         return result_txt
 
     def draw_predict_position(self, frame, outputs):
