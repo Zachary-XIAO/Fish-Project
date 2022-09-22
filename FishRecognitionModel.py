@@ -2,14 +2,15 @@
 import os
 import cv2
 import random
-import detectron2 
+import detectron2
 import numpy as np
 from detectron2.utils.logger import setup_logger
+
 setup_logger()
 
 from detectron2 import model_zoo
 from detectron2.config import get_cfg
-from detectron2.engine import DefaultTrainer,DefaultPredictor
+from detectron2.engine import DefaultTrainer, DefaultPredictor
 from detectron2.data import MetadataCatalog, DatasetCatalog
 from detectron2.utils.visualizer import Visualizer
 from detectron2.data.datasets import register_coco_instances
@@ -17,7 +18,7 @@ import matplotlib.pyplot as plt
 
 
 class FishRecogModel():
-    def __init__(self,mode = 'train'):
+    def __init__(self, mode='train'):
         if mode == 'train':
             self.cfg = get_cfg()
             self.register_coco()
@@ -31,16 +32,16 @@ class FishRecogModel():
         img_path = r"./../labelme/dataset"
         json_path = r"./trainval.json"
 
-        register_coco_instances("fishdata",{},json_path, img_path)
+        register_coco_instances("fishdata", {}, json_path, img_path)
         fishdata_metadata = MetadataCatalog.get("finshdata")
         dataset_dicts = DatasetCatalog.get("fishdata")
-        print("Register Successul, Metadata: "+str(fishdata_metadata))
+        print("Register Successul, Metadata: " + str(fishdata_metadata))
 
         for d in random.sample(dataset_dicts, 3):
             img = cv2.imread(d["file_name"])
             visualizer = Visualizer(img[:, :, ::-1], metadata=fishdata_metadata, scale=0.5)
             vis = visualizer.draw_dataset_dict(d)
-            cv2.imshow('train',vis.get_image()[:, :, ::-1])
+            cv2.imshow('train', vis.get_image()[:, :, ::-1])
             cv2.waitKey(0)
         cv2.destroyAllWindows()
 
@@ -54,27 +55,27 @@ class FishRecogModel():
         self.cfg.MODEL.ROI_HEADS.NUM_CLASSES = 5  # number of class (exclude background)
         self.cfg.DATALOADER.NUM_WORKERS = 0
         self.cfg.SOLVER.IMS_PER_BATCH = 2  # image per gpu
-        self.cfg.SOLVER.BASE_LR = 0.0001 
+        self.cfg.SOLVER.BASE_LR = 0.0001
         self.cfg.SOLVER.MAX_ITER = 100  # 12 epochs，
-    
+
     def train(self):
         os.makedirs(self.cfg.OUTPUT_DIR, exist_ok=True)
-        trainer = DefaultTrainer(self.cfg) 
+        trainer = DefaultTrainer(self.cfg)
         trainer.resume_or_load(resume=False)
         trainer.train()
-    
+
     def load_model(self):
         try:
             self.cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
             self.cfg.MODEL.ROI_HEADS.NUM_CLASSES = 5
             self.cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.8
             self.cfg.MODEL.WEIGHTS = os.path.join(self.cfg.OUTPUT_DIR, "model_final.pth")
-            
+
             return DefaultPredictor(self.cfg)
         except:
             print('There is no model exist, please train the model first.')
             return -1
-    
+
     def predict(self, frame):
         try:
             outputs = self.predictor(frame)
@@ -143,6 +144,7 @@ class FishRecogModel():
         v = v.draw_instance_predictions(outputs["instances"].to("cpu"))
         return v
 
+
 if __name__ == "__main__":
     # train model
     # model = FishRecogModel("train")
@@ -151,7 +153,7 @@ if __name__ == "__main__":
     model.register_coco()
 
     cap = cv2.VideoCapture('fish_hungry.mp4')  # loading video place
-    while(True):
+    while (True):
         ret, frame = cap.read()
         model.predict(frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
