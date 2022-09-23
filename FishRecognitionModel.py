@@ -1,13 +1,16 @@
 # After the model is trained, model_final.pth is generated in the output file.
 import os
+
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 import cv2
 import random
 import detectron2
 import numpy as np
 from detectron2.utils.logger import setup_logger
+import TextToSpeech
 
 setup_logger()
-
+import time
 from detectron2 import model_zoo
 from detectron2.config import get_cfg
 from detectron2.engine import DefaultTrainer, DefaultPredictor
@@ -18,6 +21,7 @@ import matplotlib.pyplot as plt
 
 
 class FishRecogModel():
+
     def __init__(self, mode='train'):
         if mode == 'train':
             self.cfg = get_cfg()
@@ -96,6 +100,7 @@ class FishRecogModel():
 
     def fish_position(self, outputs):
         # the rough position of the fish
+        global t2
         result_txt = ''
         if len(outputs['instances'].pred_boxes) > 1:
             pred_boxes = np.asarray(outputs['instances'].pred_boxes.to("cpu"))
@@ -106,6 +111,7 @@ class FishRecogModel():
             fish_mouse_txt = ''
             finger_txt = ''
 
+            # get the area of FishMouse
             fish_mouse_bbox_area = 0
             for i in range(len(pred_boxes)):
                 y_middle = round((pred_boxes[i][3].item() + pred_boxes[i][1].item()) / 2)
@@ -123,18 +129,28 @@ class FishRecogModel():
                         abs((pred_boxes[i][3].item() - pred_boxes[i][1].item())) *
                         abs((pred_boxes[i][2].item() - pred_boxes[i][0].item()))
                     )
+                    print("Fish mouse area: %d" % fish_mouse_bbox_area)
                 elif class_ids[i] == 4:
                     finger_txt = 'Finger Pos: (' + str(x_middle) + ',' + str(y_middle) + ')\n'
 
-            # check tired
+            # check tired, use ttsT()
             if 0 not in class_ids and 4 in class_ids:
-                # todo: say something
-                aaa = 1
+                p1 = time.perf_counter()
 
-            # check hungry
-            if fish_mouse_bbox_area > 10000 and 4 in class_ids:
-                # todo: say something
-                aaa = 1
+                TextToSpeech.ttsT()
+                print("Tiring text has been activated.")
+
+            # check hungry, use ttsH()
+            if fish_mouse_bbox_area > 1000 and 4 in class_ids:
+                t1 = time.perf_counter()
+                print("t1: ", t1)
+                print("t2: ", t2)
+                print("t1-t2: ", t1-t2)
+                if (t1-t2) > 10:
+                    #  调用语言函数
+                    t2 = t1
+                    TextToSpeech.ttsH()
+                    print("Hungry text has been activated. new t2: ", t2)
 
             result_txt = fish_txt + fish_head_txt + fish_body_txt + fish_mouse_txt + finger_txt
         return result_txt
@@ -149,10 +165,11 @@ if __name__ == "__main__":
     # train model
     # model = FishRecogModel("train")
     # load model
+    t2 = 0
     model = FishRecogModel("use")
     model.register_coco()
 
-    cap = cv2.VideoCapture('fish_hungry.mp4')  # loading video place
+    cap = cv2.VideoCapture('fishtank_video.mp4')  # loading video place
     while (True):
         ret, frame = cap.read()
         model.predict(frame)
