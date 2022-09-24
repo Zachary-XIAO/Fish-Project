@@ -129,6 +129,8 @@ class FishRecogModel():
                         abs((pred_boxes[i][3].item() - pred_boxes[i][1].item())) *
                         abs((pred_boxes[i][2].item() - pred_boxes[i][0].item()))
                     )
+                    # fish_mouse_box_x = round(pred_boxes[i][2].item() - pred_boxes[i][0].item())
+                    # fish_mouse_box_y = round(pred_boxes[i][3].item() - pred_boxes[i][1].item())
                     print("Fish mouse area: %d" % fish_mouse_bbox_area)
                 elif class_ids[i] == 4:
                     finger_txt = 'Finger Pos: (' + str(x_middle) + ',' + str(y_middle) + ')\n'
@@ -138,9 +140,9 @@ class FishRecogModel():
             if 0 not in class_ids and 4 in class_ids:
                 tiring_time1 = time.perf_counter()
                 print("tiring_time1: ", tiring_time1)
-                print("tiring_time1: ", tiring_time2)
+                print("tiring_time2: ", tiring_time2)
                 tiring_time_duration += (tiring_time1-tiring_time2)
-                print("tiring_time_duration(the value of tiring_time1-tiring_time1):", tiring_time_duration)
+                print("tiring_time_duration(the value of tiring_time1 minus tiring_time2):", tiring_time_duration)
                 tiring_time2 = tiring_time1
                 print("tiring_time2: ", tiring_time2)
                 if tiring_time_duration > 5:  # time duration for tiring reminder
@@ -149,19 +151,20 @@ class FishRecogModel():
                     print("Tiring text has been activated.")
             else:
                 tiring_time_duration = 0
-                print("Fish not tired")
+                print("Fish is not tired")
 
             # check hungry, use ttsH()
-            if fish_mouse_bbox_area > 10000 and 4 in class_ids:
+            if fish_mouse_bbox_area > 13000 and 4 in class_ids:
                 hungry_time1 = time.perf_counter()
                 print("hungry_time1: ", hungry_time1)
                 print("hungry_time2: ", hungry_time2)
                 print("time interval between two hungry time: ", hungry_time1-hungry_time2)
-                if (hungry_time1-hungry_time2) > 10:  # time interval between two hungry reminder
+                if (hungry_time1-hungry_time2) > 5:  # time interval between two hungry reminder
                     hungry_time2 = hungry_time1
                     TextToSpeech.ttsH()
                     print("Hungry text has been activated.\nhungry_time2: ", hungry_time2)
-
+            else:
+                print("Fish is not hungry.")
             result_txt = fish_txt + fish_head_txt + fish_body_txt + fish_mouse_txt + finger_txt
         return result_txt
 
@@ -181,7 +184,7 @@ if __name__ == "__main__":
     model = FishRecogModel("use")
     model.register_coco()
 
-    cap = cv2.VideoCapture('NoHandNew.mp4')  # loading video place
+    cap = cv2.VideoCapture('fishtank_video.mp4')  # loading video place
     while (True):
         ret, frame = cap.read()
         model.predict(frame)
