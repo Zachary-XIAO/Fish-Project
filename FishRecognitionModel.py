@@ -113,18 +113,31 @@ class FishRecogModel():
 
             # get the area of FishMouse
             fish_mouse_bbox_area = 0
+            fish_mouse_bbox_params = [0, 0, 0, 0]
+            fish_bbox_params = [0, 0, 0, 0]
+            fish_head_bbox_params = [0, 0, 0, 0]
+            fish_body_bbox_params = [0, 0, 0, 0]
+            finger_bbox_params = [0, 0, 0, 0]
             for i in range(len(pred_boxes)):
                 y_middle = round((pred_boxes[i][3].item() + pred_boxes[i][1].item()) / 2)
                 x_middle = round((pred_boxes[i][2].item() + pred_boxes[i][0].item()) / 2)
 
                 if class_ids[i] == 0:
                     fish_head_txt = 'Fish Head Pos: (' + str(x_middle) + ',' + str(y_middle) + ')\n'
+                    fish_head_bbox_params = [pred_boxes[i][0].item(), pred_boxes[i][2].item(),
+                                             pred_boxes[i][1].item(), pred_boxes[i][3].item()]
                 elif class_ids[i] == 1:
                     fish_body_txt = 'Fish Body Pos: (' + str(x_middle) + ',' + str(y_middle) + ')\n'
+                    fish_body_bbox_params = [pred_boxes[i][0].item(), pred_boxes[i][2].item(),
+                                             pred_boxes[i][1].item(), pred_boxes[i][3].item()]
                 elif class_ids[i] == 2:
                     fish_txt = 'Fish Pos: (' + str(x_middle) + ',' + str(y_middle) + ')\n'
+                    fish_bbox_params = [pred_boxes[i][0].item(), pred_boxes[i][2].item(),
+                                        pred_boxes[i][1].item(), pred_boxes[i][3].item()]
                 elif class_ids[i] == 3:
                     fish_mouse_txt = 'Fish Mouse Pos: (' + str(x_middle) + ',' + str(y_middle) + ')\n'
+                    fish_mouse_bbox_params = [pred_boxes[i][0].item(), pred_boxes[i][2].item(),
+                                              pred_boxes[i][1].item(), pred_boxes[i][3].item()]
                     fish_mouse_bbox_area = round(
                         abs((pred_boxes[i][3].item() - pred_boxes[i][1].item())) *
                         abs((pred_boxes[i][2].item() - pred_boxes[i][0].item()))
@@ -134,6 +147,28 @@ class FishRecogModel():
                     print("Fish mouse area: %d" % fish_mouse_bbox_area)
                 elif class_ids[i] == 4:
                     finger_txt = 'Finger Pos: (' + str(x_middle) + ',' + str(y_middle) + ')\n'
+                    finger_bbox_params = [pred_boxes[i][0].item(), pred_boxes[i][2].item(),
+                                          pred_boxes[i][1].item(), pred_boxes[i][3].item()]
+
+            # check whether the finger is blocking the fish
+            fish_blocked = False
+            if finger_bbox_params != [0, 0, 0, 0]:
+                for i in range(round(finger_bbox_params[0]), round(finger_bbox_params[1] + 1)):
+                    if fish_blocked:
+                        break
+                    for j in range(round(finger_bbox_params[2]), round(finger_bbox_params[3] + 1)):
+                        if fish_blocked:
+                            break
+                        if round(fish_mouse_bbox_params[0]) <= i <= round(fish_mouse_bbox_params[1]) and round(fish_mouse_bbox_params[2]) <= j <= round(fish_mouse_bbox_params[3]):
+                            fish_blocked = True
+                        if round(fish_bbox_params[0]) <= i <= round(fish_bbox_params[1]) and round(fish_bbox_params[2]) <= j <= round(fish_bbox_params[3]):
+                            fish_blocked = True
+                        if round(fish_head_bbox_params[0]) <= i <= round(fish_head_bbox_params[1]) and round(fish_head_bbox_params[2]) <= j <= round(fish_head_bbox_params[3]):
+                            fish_blocked = True
+                        if round(fish_body_bbox_params[0]) <= i <= round(fish_body_bbox_params[1]) and round(fish_body_bbox_params[2]) <= j <= round(fish_body_bbox_params[3]):
+                            fish_blocked = True
+
+            print('fish_block: {}'.format(fish_blocked))
 
             # check tired, use ttsT()
             tiring_time1 = time.perf_counter()
@@ -184,7 +219,7 @@ if __name__ == "__main__":
     model = FishRecogModel("use")
     model.register_coco()
 
-    cap = cv2.VideoCapture('fishtank_video.mp4')  # loading video place
+    cap = cv2.VideoCapture('fish_hungry.mp4')  # loading video place
     while (True):
         ret, frame = cap.read()
         model.predict(frame)
