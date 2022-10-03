@@ -7,7 +7,7 @@ import random
 import detectron2
 import numpy as np
 from detectron2.utils.logger import setup_logger
-import TextToSpeech
+# import TextToSpeech
 
 setup_logger()
 import time
@@ -80,11 +80,12 @@ class FishRecogModel():
             print('There is no model exist, please train the model first.')
             return -1
 
-    def predict(self, frame):
+    def predict(self, frame, hungry_time2, tiring_time2, tiring_time_duration):
         try:
             outputs = self.predictor(frame)
             # print position info
-            result = self.fish_position(outputs)
+            result, hungry_time2, tiring_time2, tiring_time_duration \
+                = self.fish_position(outputs, hungry_time2, tiring_time2, tiring_time_duration)
             print(result)
             # draw the mask
             v = self.draw_predict_position(frame, outputs)
@@ -94,13 +95,12 @@ class FishRecogModel():
             img = cv2.resize(img, (960, 540))
             cv2.imshow('frame', img)
 
-            return v.get_image()[:, :, ::-1]
+            return v.get_image()[:, :, ::-1], hungry_time2, tiring_time2, tiring_time_duration
         except:
             print('Please load the model first.')
 
-    def fish_position(self, outputs):
+    def fish_position(self, outputs, hungry_time2, tiring_time2, tiring_time_duration):
         # the rough position of the fish
-        global hungry_time2, tiring_time_duration, tiring_time2
         result_txt = ''
         if len(outputs['instances'].pred_boxes) > 1:
             pred_boxes = np.asarray(outputs['instances'].pred_boxes.to("cpu"))
@@ -181,7 +181,7 @@ class FishRecogModel():
                 tiring_time2 = tiring_time1
                 print("tiring_time2: ", tiring_time2)
                 if tiring_time_duration > 5:  # time duration for tiring reminder
-                    TextToSpeech.ttsT()
+                    # TextToSpeech.ttsT()
                     tiring_time_duration = 0
                     print("Tiring text has been activated.")
             else:
@@ -196,12 +196,16 @@ class FishRecogModel():
                 print("time interval between two hungry time: ", hungry_time1-hungry_time2)
                 if (hungry_time1-hungry_time2) > 5:  # time interval between two hungry reminder
                     hungry_time2 = hungry_time1
-                    TextToSpeech.ttsH()
+                    # TextToSpeech.ttsH()
                     print("Hungry text has been activated.\nhungry_time2: ", hungry_time2)
             else:
                 print("Fish is not hungry.")
             result_txt = fish_txt + fish_head_txt + fish_body_txt + fish_mouse_txt + finger_txt
-        return result_txt
+
+        if hungry_time2 != 0 or tiring_time2 != 0 or tiring_time_duration != 0:
+            aaa = 1
+
+        return result_txt, hungry_time2, tiring_time2, tiring_time_duration
 
     def draw_predict_position(self, frame, outputs):
         v = Visualizer(frame[:, :, ::-1], scale=1)
@@ -219,11 +223,15 @@ if __name__ == "__main__":
     model = FishRecogModel("use")
     model.register_coco()
 
-    cap = cv2.VideoCapture('fishtank_video.mp4')  # loading video place
+    cap = cv2.VideoCapture('fish_hungry_2.mp4')  # loading video place
     while (True):
-        ret, frame = cap.read()
-        model.predict(frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+        try:
+            ret, frame = cap.read()
+            _, hungry_time2, tiring_time2, tiring_time_duration \
+                = model.predict(frame, hungry_time2, tiring_time2, tiring_time_duration)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+        except:
+            print('Something goes wrong')
     cap.release()
     cv2.destroyAllWindows()
