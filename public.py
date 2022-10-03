@@ -1,7 +1,6 @@
-# _*_coding:utf-8_*_
+#_*_coding:utf-8_*_
 
-
-import wx
+import wx 
 import wx.media
 
 import cv2
@@ -9,17 +8,17 @@ import cv2
 from FishRecognitionModel import FishRecogModel
 from Dialogue_Flow import DialogueFlow
 
-
 class UI_Frame(wx.Frame):
     def __init__(self):
         # layout
-        super().__init__(parent=None, title="Fish Chat")
+        super().__init__(parent = None, title = "Fish Chat")
         # important attributes
 
         # Initiate UI
         self.InitUI()
         self.Center()
-
+        
+    
     def InitUI(self):
         panel = wx.Panel(self)
         # Headline font
@@ -35,53 +34,51 @@ class UI_Frame(wx.Frame):
         headline = wx.StaticText(panel, label="Fish")
         headline.SetFont(headline_font)
         headline.SetForegroundColour('#4073FF')
-        boxsizer.Add(headline, flag=wx.CENTER | wx.TOP, border=5)
+        boxsizer.Add(headline,flag=wx.CENTER|wx.TOP, border=5)
         self.content = wx.StaticText(panel, label='Loading')
         self.content.SetFont(content_font)
         self.content.SetForegroundColour('#96C3EB')
-        boxsizer.Add(self.content, flag=wx.CENTER | wx.TOP, border=5)
+        boxsizer.Add(self.content,flag=wx.CENTER|wx.TOP, border=5)
 
-        self.sizer.Add(boxsizer, pos=(0, 0), flag=wx.TOP | wx.LEFT | wx.BOTTOM,
-                       border=15)
+        self.sizer.Add(boxsizer, pos=(0, 0), flag=wx.TOP|wx.LEFT|wx.BOTTOM,
+            border=15)
 
         boxsizer_2 = wx.BoxSizer(wx.VERTICAL)
         headline_2 = wx.StaticText(panel, label="You")
         headline_2.SetFont(headline_font)
         headline_2.SetForegroundColour('#299438')
-        boxsizer_2.Add(headline_2, flag=wx.CENTER | wx.TOP, border=5)
+        boxsizer_2.Add(headline_2,flag=wx.CENTER|wx.TOP, border=5)
         self.content_2 = wx.StaticText(panel, label='Loading')
         self.content_2.SetFont(content_font)
         self.content_2.SetForegroundColour('#7ECC49')
-        boxsizer_2.Add(self.content_2, flag=wx.CENTER | wx.TOP, border=5)
+        boxsizer_2.Add(self.content_2,flag=wx.CENTER|wx.TOP, border=5)
 
-        self.sizer.Add(boxsizer_2, pos=(0, 1), flag=wx.TOP | wx.LEFT | wx.BOTTOM,
-                       border=15)
+        self.sizer.Add(boxsizer_2, pos=(0, 1), flag=wx.TOP|wx.LEFT|wx.BOTTOM,
+            border=15)
 
         # Video place
-        self.image_cover = wx.Image('COVER.jpg', wx.BITMAP_TYPE_ANY).Scale(480, 480)
-        # Show this picture before clicking the bottom "Run Model"
-
+        self.image_cover = wx.Image('COVER.jpg', wx.BITMAP_TYPE_ANY).Scale(480,480)
         self.icon = wx.StaticBitmap(panel, bitmap=wx.Bitmap(self.image_cover))
-        self.sizer.Add(self.icon, pos=(0, 4), flag=wx.TOP | wx.RIGHT | wx.ALIGN_RIGHT,
-                       border=5)
+        self.sizer.Add(self.icon, pos=(0, 4), flag=wx.TOP|wx.RIGHT|wx.ALIGN_RIGHT,
+            border=5)
 
         # border line
         line = wx.StaticLine(panel)
         self.sizer.Add(line, pos=(1, 0), span=(1, 5),
-                       flag=wx.EXPAND | wx.BOTTOM, border=10)
+            flag=wx.EXPAND|wx.BOTTOM, border=10)
 
         # buttons
         self.button1 = wx.Button(panel, label='Run Model')
-        self.button1.Bind(wx.EVT_BUTTON, self.init_model)
+        self.button1.Bind(wx.EVT_BUTTON,self.init_model)
         self.sizer.Add(self.button1, pos=(2, 0), flag=wx.LEFT, border=10)
 
         self.button2 = wx.Button(panel, label="Recode Voice")
-        self.button2.Bind(wx.EVT_BUTTON, self.init_dialogue_flow)
-        self.sizer.Add(self.button2, pos=(2, 1), flag=wx.LEFT)
+        self.button2.Bind(wx.EVT_BUTTON,self.init_dialogue_flow)
+        self.sizer.Add(self.button2, pos=(2, 1), flag =wx.LEFT)
 
         button3 = wx.Button(panel, label="Cancel")
         self.sizer.Add(button3, pos=(2, 4), span=(1, 1),
-                       flag=wx.BOTTOM | wx.RIGHT | wx.ALIGN_RIGHT, border=10)
+            flag=wx.BOTTOM|wx.RIGHT|wx.ALIGN_RIGHT, border=10)
 
         self.sizer.AddGrowableCol(2)
 
@@ -95,25 +92,34 @@ class UI_Frame(wx.Frame):
         # using thread to avoid stuck
         import _thread
         _thread.start_new_thread(self._init_model, (event,))
-
+    
     def _init_model(self, event=None):
         model = FishRecogModel("use")
-        cap = cv2.VideoCapture('./fishtank _video.mp4')  # the video being tested
-        while (True):
-            ret, frame = cap.read()
-            img = model.predict(frame)
-            height, width = img.shape[:2]
-            image1 = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            pic = wx.Bitmap.FromBuffer(width, height, image1)
-            self.icon.SetBitmap(pic)
-            self.sizer.Fit(self)
+        cap = cv2.VideoCapture('./fish_video.mp4')
 
+        hungry_time2 = 0
+        tiring_time_duration = 0
+        tiring_time2 = 0
+
+        while(True):
+            try:
+                ret, frame = cap.read()
+                img, hungry_time2, tiring_time2, tiring_time_duration \
+                    = model.predict(frame, hungry_time2, tiring_time2, tiring_time_duration)
+                height, width = img.shape[:2]
+                image1 = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                pic = wx.Bitmap.FromBuffer(width, height, image1)
+                self.icon.SetBitmap(pic)
+                self.sizer.Fit(self)
+            except:
+                print('Something goes wrong')
+    
     def init_dialogue_flow(self, event):
         # using thread to avoid stuck
         import _thread
         _thread.start_new_thread(self._init_dialogue_flow, (event,))
 
-    def _init_dialogue_flow(self, event=None):
+    def _init_dialogue_flow(self, event = None):
         df = DialogueFlow()
         df.record_voice()
         user_txt, dialogflow_txt = df.dialogflow_request()
