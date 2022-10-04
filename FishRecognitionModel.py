@@ -8,7 +8,7 @@ import detectron2
 import numpy as np
 from detectron2.utils.logger import setup_logger
 import TextToSpeech
-
+# from TextToSpeech import TimePara
 setup_logger()
 import time
 from detectron2 import model_zoo
@@ -99,8 +99,9 @@ class FishRecogModel():
             print('Please load the model first.')
 
     def fish_position(self, outputs):
+        # def fish_position(self, outputs, hungry_time2, tiring_time_duration, tiring_time2, flag_hungry, flag_tiring):
         # the rough position of the fish
-        global hungry_time2, tiring_time_duration, tiring_time2
+        global hungry_time2, tiring_time_duration, tiring_time2, flag_hungry, flag_tiring
         result_txt = ''
         if len(outputs['instances'].pred_boxes) > 1:
             pred_boxes = np.asarray(outputs['instances'].pred_boxes.to("cpu"))
@@ -172,16 +173,20 @@ class FishRecogModel():
 
             # check tired, use ttsT()
             tiring_time1 = time.perf_counter()
-            if 0 not in class_ids and 4 in class_ids:
+            # if 3 not in class_ids and 4 in class_ids:
+            if 3 not in class_ids and not fish_blocked and 4 in class_ids:
                 tiring_time1 = time.perf_counter()
                 print("tiring_time1: ", tiring_time1)
                 print("tiring_time2: ", tiring_time2)
-                tiring_time_duration += (tiring_time1-tiring_time2)
-                print("tiring_time_duration(the value of tiring_time1 minus tiring_time2):", tiring_time_duration)
+                tiring_time_duration += (tiring_time1 - tiring_time2)
+                print("tiring_time_duration:", tiring_time_duration)
                 tiring_time2 = tiring_time1
                 print("tiring_time2: ", tiring_time2)
-                if tiring_time_duration > 5:  # time duration for tiring reminder
+                # if tiring_time_duration > 8:
+                if tiring_time_duration > 8 and (time.perf_counter() - flag_hungry) > 15:
+                    # time duration for tiring reminder
                     TextToSpeech.ttsT()
+                    flag_tiring = time.perf_counter()
                     tiring_time_duration = 0
                     print("Tiring text has been activated.")
             else:
@@ -189,19 +194,25 @@ class FishRecogModel():
                 print("Fish is not tired")
 
             # check hungry, use ttsH()
-            if fish_mouse_bbox_area > 13000 and 4 in class_ids:
+            if fish_mouse_bbox_area > 100:
+                # if fish_mouse_bbox_area > 1300 and 4 in class_ids:
                 hungry_time1 = time.perf_counter()
                 print("hungry_time1: ", hungry_time1)
                 print("hungry_time2: ", hungry_time2)
-                print("time interval between two hungry time: ", hungry_time1-hungry_time2)
-                if (hungry_time1-hungry_time2) > 5:  # time interval between two hungry reminder
+                print("hungry time interval: ", hungry_time1-hungry_time2)
+                # if (hungry_time1-hungry_time2) > 10:
+                if (hungry_time1 - hungry_time2) > 15 and (time.perf_counter() - flag_tiring) > 15:
+                    # time interval between two hungry reminder
                     hungry_time2 = hungry_time1
                     TextToSpeech.ttsH()
+                    flag_hungry = time.perf_counter()
                     print("Hungry text has been activated.\nhungry_time2: ", hungry_time2)
             else:
                 print("Fish is not hungry.")
+
             result_txt = fish_txt + fish_head_txt + fish_body_txt + fish_mouse_txt + finger_txt
         return result_txt
+        # return result_txt, hungry_time2, tiring_time_duration, tiring_time2, flag_hungry, flag_tiring
 
     def draw_predict_position(self, frame, outputs):
         v = Visualizer(frame[:, :, ::-1], scale=1)
@@ -216,10 +227,13 @@ if __name__ == "__main__":
     hungry_time2 = 0
     tiring_time_duration = 0
     tiring_time2 = 0
+    flag_tiring = 0
+    flag_hungry = 0
     model = FishRecogModel("use")
     model.register_coco()
 
-    cap = cv2.VideoCapture('fishtank_video.mp4')  # loading video place
+    cap = cv2.VideoCapture("No_handnew.mp4")  # loading video place
+    # cap = cv2.VideoCapture(0)  # loading video place
     while (True):
         ret, frame = cap.read()
         model.predict(frame)
