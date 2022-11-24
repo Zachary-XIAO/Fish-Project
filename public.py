@@ -4,7 +4,6 @@
 import wx
 import wx.media
 import TextToSpeech
-from TextToSpeech import TimePara
 import cv2
 # API
 from FishRecognitionModel import FishRecogModel
@@ -107,11 +106,17 @@ class UI_Frame(wx.Frame):
         tiring_time2 = 0
         flag_tiring = 0
         flag_hungry = 0
+        dialog_time2 = 0
+        dialog_time_duration = 0
         while (True):
             try:
                 ret, frame = cap.read()
-                img, hungry_time2, tiring_time2, tiring_time_duration, flag_hungry, flag_tiring \
-                    = model.predict(frame, hungry_time2, tiring_time2, tiring_time_duration, flag_hungry, flag_tiring)
+                img, hungry_time2, tiring_time2, tiring_time_duration, flag_hungry, flag_tiring, \
+                    dialog_time2, dialog_time_duration, open_dialogflow_flag \
+                    = model.predict(frame, hungry_time2, tiring_time2, tiring_time_duration, flag_hungry, flag_tiring,
+                                    dialog_time2, dialog_time_duration)
+                global dialogflow_flag
+                dialogflow_flag = open_dialogflow_flag
                 height, width = img.shape[:2]
                 image1 = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                 pic = wx.Bitmap.FromBuffer(width, height, image1)
@@ -126,11 +131,26 @@ class UI_Frame(wx.Frame):
         _thread.start_new_thread(self._init_dialogue_flow, (event,))
 
     def _init_dialogue_flow(self, event=None):
-        df = DialogueFlow()
-        df.record_voice()
-        user_txt, dialogflow_txt = df.dialogflow_request()
-        self.change_txt(user_txt, dialogflow_txt)
-        df.play_audio()
+        try:  # try if the dialog can be activated
+            # if dialogflow_flag:
+            #     print("Dialogflow has been activated.")
+            #     TextToSpeech.dialog_starting_audio()  # display dialog starting audio
+            #     df = DialogueFlow()
+            #     df.record_voice()
+            #     user_txt, dialogflow_txt = df.dialogflow_request()
+            #     self.change_txt(user_txt, dialogflow_txt)
+            #     df.play_audio()
+            # else:
+            #     print("Dialogflow has closed.")
+            #     TextToSpeech.dialog_closing_audio()  # display dialog closing audio
+            df = DialogueFlow()
+            df.record_voice()
+            user_txt, dialogflow_txt = df.dialogflow_request()
+            self.change_txt(user_txt, dialogflow_txt)
+            df.play_audio()
+        except:
+            print()
+
 
     # change the notification context
     def change_txt(self, user_content, fish_content):
@@ -140,6 +160,7 @@ class UI_Frame(wx.Frame):
 
 
 if __name__ == "__main__":
+    dialog_flag = False
     app = wx.App()
     frame = UI_Frame()
     app.MainLoop()
