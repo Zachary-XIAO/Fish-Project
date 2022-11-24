@@ -8,7 +8,6 @@ import detectron2
 import numpy as np
 from detectron2.utils.logger import setup_logger
 import TextToSpeech
-# from TextToSpeech import TimePara
 setup_logger()
 import time
 from detectron2 import model_zoo
@@ -80,12 +79,14 @@ class FishRecogModel():
             print('There is no model exist, please train the model first.')
             return -1
 
-    def predict(self, frame, hungry_time2, tiring_time2, tiring_time_duration, flag_hungry, flag_tiring):
+    def predict(self, frame, hungry_time2, tiring_time2, tiring_time_duration, flag_hungry, flag_tiring, dialog_time2, dialog_time_duration):
         try:
             outputs = self.predictor(frame)
             # print position info
-            result, hungry_time2, tiring_time2, tiring_time_duration, flag_hungry, flag_tiring \
-                = self.fish_position(outputs, hungry_time2, tiring_time2, tiring_time_duration, flag_hungry, flag_tiring)
+            result, hungry_time2, tiring_time2, tiring_time_duration, flag_hungry, flag_tiring,  \
+            dialog_time2, dialog_time_duration, open_dialogflow_flag\
+                = self.fish_position(outputs, hungry_time2, tiring_time2, tiring_time_duration, flag_hungry, flag_tiring,
+                                     dialog_time2, dialog_time_duration)
             print(result)
             # draw the mask
             v = self.draw_predict_position(frame, outputs)
@@ -95,12 +96,14 @@ class FishRecogModel():
             img = cv2.resize(img, (960, 540))
             cv2.imshow('frame', img)
 
-            return v.get_image()[:, :, ::-1], hungry_time2, tiring_time2, tiring_time_duration, flag_hungry, flag_tiring
+            return v.get_image()[:, :, ::-1], hungry_time2, tiring_time2, tiring_time_duration, \
+                   flag_hungry, flag_tiring, dialog_time2, dialog_time_duration, open_dialogflow_flag
         except:
             print('Please load the model first.')
 
     # def fish_position(self, outputs):
-    def fish_position(self, outputs, hungry_time2, tiring_time2, tiring_time_duration, flag_hungry, flag_tiring):
+    def fish_position(self, outputs, hungry_time2, tiring_time2, tiring_time_duration, flag_hungry, flag_tiring,
+                      dialog_time2, dialog_time_duration):
         # the rough position of the fish
         result_txt = ''
         if len(outputs['instances'].pred_boxes) > 1:
@@ -131,6 +134,10 @@ class FishRecogModel():
                     fish_body_txt = 'Fish Body Pos: (' + str(x_middle) + ',' + str(y_middle) + ')\n'
                     fish_body_bbox_params = [pred_boxes[i][0].item(), pred_boxes[i][2].item(),
                                              pred_boxes[i][1].item(), pred_boxes[i][3].item()]
+                    fish_body_bbox_area = round(
+                        abs((pred_boxes[i][3].item() - pred_boxes[i][1].item())) *
+                        abs((pred_boxes[i][2].item() - pred_boxes[i][0].item()))
+                    )
                 elif class_ids[i] == 2:
                     fish_txt = 'Fish Pos: (' + str(x_middle) + ',' + str(y_middle) + ')\n'
                     fish_bbox_params = [pred_boxes[i][0].item(), pred_boxes[i][2].item(),
@@ -145,7 +152,7 @@ class FishRecogModel():
                     )
                     # fish_mouse_box_x = round(pred_boxes[i][2].item() - pred_boxes[i][0].item())
                     # fish_mouse_box_y = round(pred_boxes[i][3].item() - pred_boxes[i][1].item())
-                    print("Fish mouse area: %d" % fish_mouse_bbox_area)
+                    print("Fish mouse area: ", fish_mouse_bbox_area)
                 elif class_ids[i] == 4:
                     finger_txt = 'Finger Pos: (' + str(x_middle) + ',' + str(y_middle) + ')\n'
                     finger_bbox_params = [pred_boxes[i][0].item(), pred_boxes[i][2].item(),
@@ -160,58 +167,76 @@ class FishRecogModel():
                     for j in range(round(finger_bbox_params[2]), round(finger_bbox_params[3] + 1)):
                         if fish_blocked:
                             break
-                        if round(fish_mouse_bbox_params[0]) <= i <= round(fish_mouse_bbox_params[1]) and round(fish_mouse_bbox_params[2]) <= j <= round(fish_mouse_bbox_params[3]):
+                        if round(fish_mouse_bbox_params[0]) <= i <= round(fish_mouse_bbox_params[1]) \
+                                and round(fish_mouse_bbox_params[2]) <= j <= round(fish_mouse_bbox_params[3]):
                             fish_blocked = True
-                        if round(fish_bbox_params[0]) <= i <= round(fish_bbox_params[1]) and round(fish_bbox_params[2]) <= j <= round(fish_bbox_params[3]):
+                        if round(fish_bbox_params[0]) <= i <= round(fish_bbox_params[1]) \
+                                and round(fish_bbox_params[2]) <= j <= round(fish_bbox_params[3]):
                             fish_blocked = True
-                        if round(fish_head_bbox_params[0]) <= i <= round(fish_head_bbox_params[1]) and round(fish_head_bbox_params[2]) <= j <= round(fish_head_bbox_params[3]):
+                        if round(fish_head_bbox_params[0]) <= i <= round(fish_head_bbox_params[1]) \
+                                and round(fish_head_bbox_params[2]) <= j <= round(fish_head_bbox_params[3]):
                             fish_blocked = True
-                        if round(fish_body_bbox_params[0]) <= i <= round(fish_body_bbox_params[1]) and round(fish_body_bbox_params[2]) <= j <= round(fish_body_bbox_params[3]):
+                        if round(fish_body_bbox_params[0]) <= i <= round(fish_body_bbox_params[1]) \
+                                and round(fish_body_bbox_params[2]) <= j <= round(fish_body_bbox_params[3]):
                             fish_blocked = True
 
             print('fish_block: {}'.format(fish_blocked))
 
-            # check tired, use ttsT()
+            # check tired, use tiring_audio()
             tiring_time1 = time.perf_counter()
-            # if 3 not in class_ids and 4 in class_ids:
+            tiring_time_interval = tiring_time1 - tiring_time2  # time interval between processing two pictures
+            tiring_time2 = time.perf_counter()
             if 3 not in class_ids and not fish_blocked and 4 in class_ids:
-                tiring_time1 = time.perf_counter()
                 print("tiring_time1: ", tiring_time1)
-                print("tiring_time2: ", tiring_time2)
-                tiring_time_duration += (tiring_time1 - tiring_time2)
+                tiring_time_duration += tiring_time_interval
+                print("tiring_time_interval: ", tiring_time_interval)
                 print("tiring_time_duration:", tiring_time_duration)
-                tiring_time2 = tiring_time1
-                print("tiring_time2: ", tiring_time2)
-                if tiring_time_duration > 5 and (time.perf_counter() - flag_hungry) > 8:
+                if tiring_time_duration > 5 and (time.perf_counter() - flag_hungry) > 15:
                     # time duration for tiring reminder
-                    TextToSpeech.ttsT()
-                    flag_tiring = time.perf_counter()
+                    TextToSpeech.tiring_audio()
+                    flag_tiring = time.perf_counter()  # give time for the audio to display
                     tiring_time_duration = 0
                     print("Tiring text has been activated.")
             else:
                 tiring_time_duration = 0
                 print("Fish is not tired")
 
-            # check hungry, use ttsH()
-            if fish_mouse_bbox_area > 5000 and 4 in class_ids:
+            # check hungry, use hungry_audio()
+            if fish_mouse_bbox_area > 3000 and 4 in class_ids:
                 hungry_time1 = time.perf_counter()
                 print("hungry_time1: ", hungry_time1)
                 print("hungry_time2: ", hungry_time2)
                 print("hungry time interval: ", hungry_time1-hungry_time2)
-                if (hungry_time1 - hungry_time2) > 15 and (time.perf_counter() - flag_tiring) > 8:
+                if (hungry_time1 - hungry_time2) > 15 and (time.perf_counter() - flag_tiring) > 15:
                     # time interval between two hungry reminder
                     hungry_time2 = hungry_time1
-                    TextToSpeech.ttsH()
-                    flag_hungry = time.perf_counter()
+                    TextToSpeech.hungry_audio()
+                    flag_hungry = time.perf_counter()  # give time for the audio to display
                     print("Hungry text has been activated.\nhungry_time2: ", hungry_time2)
             else:
                 print("Fish is not hungry.")
 
+            # check, trigger dialogflow
+            open_dialogflow_flag = False
+            dialog_time1 = time.perf_counter()
+            dialog_time_interval = dialog_time1 - dialog_time2  # time interval between processing two pictures
+            dialog_time2 = dialog_time1
+            # print("dialog_time_interval: ", dialog_time_interval)
+            dialog_time2 = time.perf_counter()
+            if fish_mouse_bbox_area > 100:
+                dialog_time_duration += dialog_time_interval
+                print("dialog_time_duration: ", dialog_time_duration)
+                if dialog_time_duration > 5:
+                    open_dialogflow_flag = True
+                    print("trigger dialogflow.")
+
             result_txt = fish_txt + fish_head_txt + fish_body_txt + fish_mouse_txt + finger_txt
 
         if hungry_time2 != 0 or tiring_time2 != 0 or tiring_time_duration != 0:
-                aaa = 1
-        return result_txt, hungry_time2, tiring_time2, tiring_time_duration, flag_hungry, flag_tiring
+            aaa = 1
+
+        return result_txt, hungry_time2, tiring_time2, tiring_time_duration, flag_hungry, flag_tiring, \
+               dialog_time2, dialog_time_duration, open_dialogflow_flag
 
     def draw_predict_position(self, frame, outputs):
         v = Visualizer(frame[:, :, ::-1], scale=1)
@@ -228,15 +253,19 @@ if __name__ == "__main__":
     tiring_time2 = 0
     flag_tiring = 0
     flag_hungry = 0
+    dialog_time2 = 0
+    dialog_time_duration = 0
     model = FishRecogModel("use")
     model.register_coco()
 
-    cap = cv2.VideoCapture("No_handnew.mp4")  # loading video place
-    # cap = cv2.VideoCapture(0)
+    # cap = cv2.VideoCapture("No_handnew.mp4")  # loading video place
+    cap = cv2.VideoCapture(0)
     while (True):
         ret, frame = cap.read()
-        _, hungry_time2, tiring_time2, tiring_time_duration, flag_hungry, flag_tiring \
-        = model.predict(frame, hungry_time2, tiring_time2, tiring_time_duration, flag_hungry, flag_tiring)
+        _, hungry_time2, tiring_time2, tiring_time_duration, flag_hungry, flag_tiring, \
+            dialog_time2, dialog_time_duration \
+            = model.predict(frame, hungry_time2, tiring_time2, tiring_time_duration, flag_hungry, flag_tiring,
+                            dialog_time2, dialog_time_duration)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
     cap.release()
