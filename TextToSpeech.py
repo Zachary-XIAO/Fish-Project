@@ -2,9 +2,11 @@ from google.cloud import texttospeech
 import os
 
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'polyu-wkwf-99b942e126ff.json'
-# For hungry, use ttsH(); for tired, use ttsT()
+# For hungry, use hungry_audio()
+# For tired, use tiring_audio()
+# For dialog starting, use dialog_starting_audio()
 
-def ttsH():
+def hungry_audio():
     client = texttospeech.TextToSpeechClient()
 
     synthesis_input = texttospeech.SynthesisInput(
@@ -25,15 +27,15 @@ def ttsH():
         audio_config=audio_config)
     with open('SpeechCache.wav', 'wb') as out:
         out.write(response.audio_content)
-        print('Audio content written to file "SpeechCache.wav"')
+        print('Hungry audio content written to file "SpeechCache.wav"')
     file = 'SpeechCache.wav'
     os.system(file)
 
-def ttsT():
+def tiring_audio():
     client = texttospeech.TextToSpeechClient()
 
     synthesis_input = texttospeech.SynthesisInput(
-        text="我现在很疲惫，可以让我休息一下吗？")
+        text="我现在很疲惫，想休息一下了")
 
     voice = texttospeech.VoiceSelectionParams(
         # language_code='en-gb',
@@ -50,9 +52,56 @@ def ttsT():
         audio_config=audio_config)
     with open('SpeechCache.wav', 'wb') as out:
         out.write(response.audio_content)
-        print('Audio content written to file "SpeechCache.wav"')
+        print('Tiring audio content written to file "SpeechCache.wav"')
     file = 'SpeechCache.wav'
     os.system(file)
 
-# ttsH()
-# ttsT()
+def dialog_starting_audio():
+    client = texttospeech.TextToSpeechClient()
+
+    synthesis_input = texttospeech.SynthesisInput(
+        text="语音对话启动！一起聊天吧！")
+
+    voice = texttospeech.VoiceSelectionParams(
+        # language_code='en-gb',
+        # name='en-GB-Standard-A',
+        language_code='zh-CN',
+        ssml_gender=texttospeech.SsmlVoiceGender.FEMALE)
+
+    audio_config = texttospeech.AudioConfig(
+        audio_encoding=texttospeech.AudioEncoding.MP3, speaking_rate=1)
+    #  valid speaking_rate is between 0.25 and 4.0
+    response = client.synthesize_speech(
+        input=synthesis_input,
+        voice=voice,
+        audio_config=audio_config)
+    with open('SpeechCache.wav', 'wb') as out:
+        out.write(response.audio_content)
+        print('dialog starting audio content written to file "SpeechCache.wav"')
+    file = 'SpeechCache.wav'
+    os.system(file)
+
+def dialog_closing_audio():
+    client = texttospeech.TextToSpeechClient()
+
+    synthesis_input = texttospeech.SynthesisInput(
+        text="语音对话未启动！请等待鱼面对摄像头后请重试。")
+
+    voice = texttospeech.VoiceSelectionParams(
+        # language_code='en-gb',
+        # name='en-GB-Standard-A',
+        language_code='zh-CN',
+        ssml_gender=texttospeech.SsmlVoiceGender.FEMALE)
+
+    audio_config = texttospeech.AudioConfig(
+        audio_encoding=texttospeech.AudioEncoding.MP3, speaking_rate=1)
+    #  valid speaking_rate is between 0.25 and 4.0
+    response = client.synthesize_speech(
+        input=synthesis_input,
+        voice=voice,
+        audio_config=audio_config)
+    with open('SpeechCache.wav', 'wb') as out:
+        out.write(response.audio_content)
+        print('dialog closing audio content written to file "SpeechCache.wav"')
+    file = 'SpeechCache.wav'
+    os.system(file)
