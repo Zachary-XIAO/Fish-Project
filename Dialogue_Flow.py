@@ -1,6 +1,10 @@
 import os
+import random
+
 import pyaudio
 import wave
+import cv2
+from playsound import playsound
 from google.cloud import dialogflow
 
 
@@ -141,6 +145,19 @@ class DialogueFlow():
         self.change_txt(user_txt, dialogflow_txt)
         df.play_audio()
 
+        if dialogflow_txt == '好的，为你播放北风吹':
+            print('now playing: 北风吹')
+            playsound('music/beifengchui.mp3')
+        elif dialogflow_txt == '好的，为你播放南泥湾':
+            print('now playing: 南泥湾')
+            playsound('music/nanniwan.mp3')
+        elif dialogflow_txt == '好的，这就展示图片':
+            print('now showing pictures')
+            num = random.randint(1, 5)
+            img = cv2.imread('pic/{}.png'.format(num))
+            cv2.imshow('风景', img)
+            cv2.waitKey(5000)
+
 
 if __name__ == '__main__':
     os.system('@echo off')
@@ -151,4 +168,18 @@ if __name__ == '__main__':
 
     df = DialogueFlow()
     df.record_voice()
-    df.dialogflow_request()
+    user_txt, dialogflow_txt = df.dialogflow_request()
+    df.play_audio()
+
+    if dialogflow_txt == '好的，为你播放北风吹':
+        print('now playing: 北风吹')
+        playsound('music/beifengchui.mp3')
+    elif dialogflow_txt == '好的，为你播放南泥湾':
+        print('now playing: 南泥湾')
+        playsound('music/nanniwan.mp3')
+    elif dialogflow_txt == '好的，这就展示图片':
+        print('now showing pictures')
+        num = random.randint(1, 5)
+        img = cv2.imread('pic/{}.png'.format(num))
+        cv2.imshow('风景', img)
+        cv2.waitKey(5000)
