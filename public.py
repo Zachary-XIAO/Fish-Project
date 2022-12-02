@@ -5,9 +5,12 @@ import wx
 import wx.media
 import TextToSpeech
 import cv2
+import time
+import random
 # API
 from FishRecognitionModel import FishRecogModel
 from Dialogue_Flow import DialogueFlow
+from playsound import playsound
 
 
 class UI_Frame(wx.Frame):
@@ -98,8 +101,8 @@ class UI_Frame(wx.Frame):
 
     def _init_model(self, event=None):
         model = FishRecogModel("use")
-        # cap = cv2.VideoCapture('./No_handnew.mp4')  # the video being tested
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture('./fish_hungry.mp4')  # the video being tested
+        # cap = cv2.VideoCapture(0)
 
         hungry_time2 = 0
         tiring_time_duration = 0
@@ -108,8 +111,18 @@ class UI_Frame(wx.Frame):
         flag_hungry = 0
         dialog_time2 = 0
         dialog_time_duration = 0
+        previous_counter = -100
         while (True):
             try:
+                # take medicine notice
+                now_time = time.strftime('%H:%M', time.localtime(time.time()))
+                take_medicine_time_list = ['08:30', '11:12']
+                now_counter = time.perf_counter()
+                if now_time in take_medicine_time_list and now_counter - previous_counter >= 60:
+                    print('take medicine notice, {}'.format(now_time))
+                    TextToSpeech.take_medicine_notice_audio()
+                    previous_counter = time.perf_counter()
+
                 ret, frame = cap.read()
                 img, hungry_time2, tiring_time2, tiring_time_duration, flag_hungry, flag_tiring, \
                     dialog_time2, dialog_time_duration, open_dialogflow_flag \
@@ -143,14 +156,27 @@ class UI_Frame(wx.Frame):
             # else:
             #     print("Dialogflow has closed.")
             #     TextToSpeech.dialog_closing_audio()  # display dialog closing audio
+
             df = DialogueFlow()
             df.record_voice()
             user_txt, dialogflow_txt = df.dialogflow_request()
             self.change_txt(user_txt, dialogflow_txt)
             df.play_audio()
+
+            if dialogflow_txt == '好的，为你播放北风吹':
+                print('now playing: 北风吹')
+                playsound('music/beifengchui.mp3')
+            elif dialogflow_txt == '好的，为你播放南泥湾':
+                print('now playing: 南泥湾')
+                playsound('music/nanniwan.mp3')
+            elif dialogflow_txt == '好的，这就展示图片':
+                print('now showing pictures')
+                num = random.randint(1, 5)
+                img = cv2.imread('pic/{}.png'.format(num))
+                cv2.imshow('风景', img)
+                cv2.waitKey(5000)
         except:
             print()
-
 
     # change the notification context
     def change_txt(self, user_content, fish_content):
